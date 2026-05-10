@@ -23,10 +23,17 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using static BGInfoPlus.Modules.Enums;
 
 namespace BGInfoPlus.Modules.Core
 {
+    public enum StatusSeverityType
+    {
+        Information = 0,
+        Warning = 1,
+        Error = 2,
+        Debug = 3,
+        Fatal = 4
+    }
     public static class TraceLogger
     {
         private static readonly Lock _lock = new();
@@ -34,6 +41,31 @@ namespace BGInfoPlus.Modules.Core
         private static string _currentDate = DateTime.Now.ToString("dd-MM-yyyy");
         private static DateTime _lastDateCheck = DateTime.MinValue;
         private static readonly bool EnableDiskLogging = true;
+        private static bool _isDirectoryCreated = false;
+
+        static TraceLogger()
+        {
+            EnsureLogDirectoryExists();
+        }
+
+        private static void EnsureLogDirectoryExists()
+        {
+            if (_isDirectoryCreated || !EnableDiskLogging) return;
+
+            try
+            {
+                if (!Directory.Exists(_logDirectory))
+                {
+                    Directory.CreateDirectory(_logDirectory);
+                    Console.WriteLine($"Created log directory: {_logDirectory}");
+                }
+                _isDirectoryCreated = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to create log directory '{_logDirectory}': {ex.Message}");
+            }
+        }
 
         public static void PurgeAllLogs()
         {
@@ -56,7 +88,7 @@ namespace BGInfoPlus.Modules.Core
                     DateTime expiryDate = DateTime.Now.AddDays(-7);
                     foreach (var logFile in logFiles)
                     {
-                        var fileInfo = new FileInfo(logFile);
+                        FileInfo fileInfo = new(logFile);
                         if (fileInfo.CreationTime < expiryDate)
                         {
                             fileInfo.Delete();
